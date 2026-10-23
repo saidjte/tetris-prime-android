@@ -31,7 +31,7 @@ class GameEngine {
 
     /** Drop speed in milliseconds per cell. */
     val dropIntervalMs: Long
-        get() = Math.max(50, 800 - (level - 1) * 60)
+        get() = Math.max(50L, (800 - (level - 1) * 60).toLong())
 
     private var dropAccumulator = 0L
 
