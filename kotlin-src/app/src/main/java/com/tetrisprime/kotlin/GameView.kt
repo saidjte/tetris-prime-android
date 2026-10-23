@@ -9,6 +9,7 @@ import android.view.View
 
 /**
  * Custom View that renders the Tetris board and current piece.
+ * Renders only the visible playfield (rows 2..height-1).
  */
 class GameView @JvmOverloads constructor(
     context: Context,
@@ -16,7 +17,7 @@ class GameView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
 
-    private val engine = GameEngine()
+    private var engine = GameEngine()
     private var cellSize = 0f
     private var boardOffsetX = 0f
     private var boardOffsetY = 0f
@@ -40,7 +41,9 @@ class GameView @JvmOverloads constructor(
         color = Color.argb(180, 11, 8, 30)
     }
 
-    val gameEngine: GameEngine get() = engine
+    private val dangerPaint = Paint().apply {
+        color = Color.argb(40, 239, 68, 68)
+    }
 
     /** Piece colors. */
     private val pieceColors = mapOf(
@@ -50,8 +53,17 @@ class GameView @JvmOverloads constructor(
         'S' to Color.parseColor("#34D399"),
         'Z' to Color.parseColor("#FB7185"),
         'J' to Color.parseColor("#60A5FA"),
-        'L' to Color.parseColor("#FB923C")
+        'L' to Color.parseColor("#FB923C"),
+        'G' to Color.parseColor("#6B7280"), // garbage
+        'C' to Color.parseColor("#FDE68A")  // cheese
     )
+
+    val gameEngine: GameEngine get() = engine
+
+    fun setEngine(newEngine: GameEngine) {
+        engine = newEngine
+        invalidate()
+    }
 
     init {
         engine.start()
@@ -60,46 +72,61 @@ class GameView @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         val boardWidth = engine.board.width
-        val boardHeight = engine.board.height
-        cellSize = Math.min(w.toFloat() / boardWidth, h.toFloat() / boardHeight)
+        val visibleHeight = engine.board.visibleHeight
+        cellSize = Math.min(w.toFloat() / boardWidth, h.toFloat() / visibleHeight)
         boardOffsetX = (w - cellSize * boardWidth) / 2
-        boardOffsetY = (h - cellSize * boardHeight) / 2
+        boardOffsetY = (h - cellSize * visibleHeight) / 2
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         canvas.drawColor(Color.parseColor("#0B081E"))
 
+        val board = engine.board
+        val visHeight = board.visibleHeight
+
+        // Danger zone tint
+        if (engine.isInDanger()) {
+            canvas.drawRect(
+                boardOffsetX, boardOffsetY,
+                boardOffsetX + cellSize * board.width,
+                boardOffsetY + cellSize * visHeight,
+                dangerPaint
+            )
+        }
+
         // Board background
         canvas.drawRect(
             boardOffsetX, boardOffsetY,
-            boardOffsetX + cellSize * engine.board.width,
-            boardOffsetY + cellSize * engine.board.height,
+            boardOffsetX + cellSize * board.width,
+            boardOffsetY + cellSize * visHeight,
             bgPaint
         )
 
         // Grid lines
-        for (x in 0..engine.board.width) {
+        for (x in 0..board.width) {
             canvas.drawLine(
                 boardOffsetX + x * cellSize, boardOffsetY,
-                boardOffsetX + x * cellSize, boardOffsetY + cellSize * engine.board.height,
+                boardOffsetX + x * cellSize, boardOffsetY + cellSize * visHeight,
                 gridPaint
             )
         }
-        for (y in 0..engine.board.height) {
+        for (y in 0..visHeight) {
             canvas.drawLine(
                 boardOffsetX, boardOffsetY + y * cellSize,
-                boardOffsetX + cellSize * engine.board.width, boardOffsetY + y * cellSize,
+                boardOffsetX + cellSize * board.width, boardOffsetY + y * cellSize,
                 gridPaint
             )
         }
 
-        // Locked blocks
-        for (y in 0 until engine.board.height) {
-            for (x in 0 until engine.board.width) {
-                engine.board[x, y]?.let { type ->
+        // Locked blocks (only visible rows)
+        // Row y in board maps to row (y-2) on screen
+        for (boardY in 2 until board.height) {
+            val screenY = boardY - 2
+            for (x in 0 until board.width) {
+                board[x, boardY]?.let { type ->
                     val color = pieceColors[type] ?: Color.WHITE
-                    drawBlock(canvas, x, y, color)
+                    drawBlock(canvas, x, screenY, color)
                 }
             }
         }
@@ -109,14 +136,8 @@ class GameView @JvmOverloads constructor(
             val color = pieceColors[ghost.type.char] ?: Color.WHITE
             ghostPaint.color = Color.argb(100, Color.red(color), Color.green(color), Color.blue(color))
             ghost.cells().forEach { (x, y) ->
-                if (y >= 0) {
-                    canvas.drawRect(
-                        boardOffsetX + x * cellSize + 2,
-                        boardOffsetY + y * cellSize + 2,
-                        boardOffsetX + (x + 1) * cellSize - 2,
-                        boardOffsetY + (y + 1) * cellSize - 2,
-                        ghostPaint
-                    )
+                if (y >= 2) {
+                    drawGhostBlock(canvas, x, y - 2, ghostPaint)
                 }
             }
         }
@@ -125,8 +146,8 @@ class GameView @JvmOverloads constructor(
         engine.currentPiece?.let { piece ->
             val color = pieceColors[piece.type.char] ?: Color.WHITE
             piece.cells().forEach { (x, y) ->
-                if (y >= 0) {
-                    drawBlock(canvas, x, y, color)
+                if (y >= 2) {
+                    drawBlock(canvas, x, y - 2, color)
                 }
             }
         }
@@ -145,8 +166,20 @@ class GameView @JvmOverloads constructor(
         canvas.drawRect(left, top, right, top + (bottom - top) * 0.2f, blockPaint)
     }
 
+    private fun drawGhostBlock(canvas: Canvas, x: Int, y: Int, paint: Paint) {
+        val left = boardOffsetX + x * cellSize + 2
+        val top = boardOffsetY + y * cellSize + 2
+        val right = boardOffsetX + (x + 1) * cellSize - 2
+        val bottom = boardOffsetY + (y + 1) * cellSize - 2
+        canvas.drawRect(left, top, right, bottom, paint)
+    }
+
     fun update(deltaMs: Long) {
-        engine.update(deltaMs)
+        if (engine.status == GameStatus.COUNTDOWN) {
+            engine.updateCountdown(deltaMs)
+        } else if (engine.status == GameStatus.PLAYING) {
+            engine.update(deltaMs)
+        }
         invalidate()
     }
 }
