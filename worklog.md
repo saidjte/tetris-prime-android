@@ -140,3 +140,72 @@ git archive --format=zip --prefix=tetris-prime-4.80.0/ HEAD -o build/tetris-prim
 ### ملاحظة
 الـ artifacts متاحة للتحميل من صفحة الـ CI run فقط (تتطلب تسجيل دخول GitHub).
 لإنشاء Release عام بروابط تحميل مباشرة، يجب إنشاؤه يدوياً عبر REST API.
+
+## 2026-10-23: المرحلة 1 — محرك اللعبة الكامل
+
+### ما تم إنجازه
+
+#### Board.kt (مُحدّث)
+- ✅ تصحيح الارتفاع من 20 إلى **22 صف** (مطابق للأصل)
+- ✅ دعم علامات خاصة: `G` (قمامة)، `C` (جبن)
+- ✅ **T-Spin detection** (قاعدة الـ3 أركان): NONE / MINI / FULL
+- ✅ **Perfect Clear detection** (board.isEmpty())
+- ✅ **Danger zone detection** (highestFilledRow >= 15)
+- ✅ إضافة صفوف القمامة (addGarbageRow)
+- ✅ ملء خلايا الجبن (fillCheese) لنمط cheese
+- ✅ نسخ اللوحة (copy)
+
+#### BagRandomizer.kt (مُحدّث)
+- ✅ **Fnv1aHash** — دالة hash مطابقة للأصل (seed=0x811c9dc5, prime=0x1000193)
+- ✅ **dailyGoal()** — حساب هدف التحدي اليومي (9000 + hash%25 × 250)
+- ✅ **SeededRandom** — مولّد أرقام شبه عشوائية محدد (LCG)
+- ✅ **SeededBagRandomizer** — 7-bag محدد للتحديات اليومية الحتمية
+
+#### GameEngine.kt (مُحدّث بالكامل)
+- ✅ **صيغة الجاذبية الرسمية**: `max(30, round(1000 × (0.8-(level-1)×0.007)^(level-1)))`
+- ✅ **Lock delay** (500ms) مع max 15 resets
+- ✅ **T-Spin detection** (3-corner rule + lastActionWasRotate)
+- ✅ **Perfect Clear** (+2000 × level)
+- ✅ **Back-to-Back** (1.5× multiplier) للـ Tetris/T-Spin المتتالي
+- ✅ **Combo system** (+50 × combo × level)
+- ✅ **جداول النقاط الكاملة**:
+  - عادي: [0, 100, 300, 500, 800]
+  - T-Spin: [0, 800, 1200, 1600]
+  - T-Spin Mini: نصف النقاط
+- ✅ **9 أنماط لعب** (CLASSIC, SPRINT, ULTRA, ZEN, CHEESE, MISSION, DAILY, BATTLE, ADVENTURE)
+- ✅ **نظام العد التنازلي** (3-2-1-GO)
+- ✅ **تتبع الإحصائيات**: tetrises, tspins, perfectClears, maxCombo, maxB2b, piecesPlaced
+- ✅ Soft drop hold (setSoftDropping)
+- ✅ DAS/ARR للحركة المتكررة
+
+#### GameView.kt (مُحدّث)
+- ✅ عرض الحقل المرئي فقط (صفوف 2-21)
+- ✅ **توهج الخطر** (أحمر عند امتلاء اللوحة)
+- ✅ ألوان القمامة والجبن
+- ✅ Ghost piece محسّن
+
+#### MainActivity.kt (مُحدّث)
+- ✅ **DAS=150ms / ARR=35ms** للحركة المتكررة
+- ✅ **Soft drop hold** (اضغط واستمر)
+- ✅ عرض Combo
+- ✅ عرض الحالة (countdown/paused/game over)
+
+### التحقق
+- ✅ CI Build: نجح
+- ✅ Kotlin compilation: نجح
+- 🔗 Build URL: https://github.com/saidjte/tetris-prime-android/actions/runs/40012086926
+
+### الميكانيكيات المنفّذة (مطابقة للأصل)
+1. SRS rotation + wall kicks ✅
+2. 7-bag randomizer ✅
+3. Official gravity formula ✅
+4. Lock delay (500ms, max 15 resets) ✅
+5. T-Spin detection (3-corner rule) ✅
+6. Perfect Clear detection ✅
+7. Back-to-Back (1.5×) ✅
+8. Combo system ✅
+9. Full scoring tables ✅
+10. 9 game modes ✅
+11. Countdown system ✅
+12. Seeded RNG for daily challenges ✅
+13. Danger zone detection ✅
