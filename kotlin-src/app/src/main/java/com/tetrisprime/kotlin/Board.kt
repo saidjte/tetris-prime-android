@@ -5,7 +5,7 @@ package com.tetrisprime.kotlin
  * Stores which cells are filled and with which piece type.
  */
 class Board(val width: Int = 10, val height: Int = 20) {
-    private val grid: Array<CharArray?> = arrayOfNulls(width * height)
+    private val grid: Array<Char?> = arrayOfNulls(width * height)
 
     operator fun get(x: Int, y: Int): Char? {
         if (x < 0 || x >= width || y < 0 || y >= height) return null
@@ -47,7 +47,6 @@ class Board(val width: Int = 10, val height: Int = 20) {
                 }
             }
             if (full) {
-                // Shift everything above down
                 for (ny in y downTo 1) {
                     for (x in 0 until width) {
                         this[x, ny] = this[x, ny - 1]
@@ -57,16 +56,15 @@ class Board(val width: Int = 10, val height: Int = 20) {
                     this[x, 0] = null
                 }
                 cleared++
-                // Re-check same row (now has new content)
             }
         }
         return cleared
     }
 
-    /** Check if the board is in game-over state (piece spawned colliding). */
+    /** Check if the board is in game-over state. */
     fun isGameOver(piece: Piece): Boolean = !isValid(piece)
 
-    /** Get the ghost piece position (where piece would land). */
+    /** Get the ghost piece position. */
     fun ghostDrop(piece: Piece): Piece {
         var p = piece
         while (isValid(p.moved(0, 1))) {

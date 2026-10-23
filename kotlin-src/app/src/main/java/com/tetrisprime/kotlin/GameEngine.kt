@@ -100,7 +100,7 @@ class GameEngine {
         val moved = p.moved(0, 1)
         return if (board.isValid(moved)) {
             currentPiece = moved
-            score += 1
+            score += 1L
             true
         } else {
             lockPiece()
@@ -113,7 +113,7 @@ class GameEngine {
         val p = currentPiece ?: return
         val ghost = board.ghostDrop(p)
         val dropDistance = ghost.y - p.y
-        score += dropDistance * 2
+        score += dropDistance.toLong() * 2L
         currentPiece = ghost
         lockPiece()
     }
@@ -148,7 +148,7 @@ class GameEngine {
                 3 -> 500
                 else -> 800
             }
-            score += baseScore * level
+            score += baseScore.toLong() * level
             lines += cleared
             combo++
 
@@ -157,7 +157,7 @@ class GameEngine {
 
             // Combo bonus
             if (combo > 0) {
-                score += 50 * combo * level
+                score += 50L * combo * level
             }
         } else {
             combo = -1
