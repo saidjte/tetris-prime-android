@@ -93,3 +93,50 @@ git archive --format=zip --prefix=tetris-prime-4.80.0/ HEAD -o build/tetris-prim
 
 ### صفحة المعاينة
 تم تحديث صفحة المعاينة لاستخدام روابط GitHub Release مباشرة.
+
+## 2026-10-23: Kotlin CI Workflow
+
+### الخطوات المنفّذة
+
+#### 1. إنشاء GitHub Actions workflow للبناء Kotlin
+- الملف: `.github/workflows/build-kotlin.yml`
+- يعمل عند كل push إلى `kotlin-src/` أو `workflow_dispatch`
+- يستخدم JDK 17 + Gradle 8.2
+
+#### 2. خطوات الـ CI
+1. Checkout الكود
+2. تثبيت JDK 17
+3. منح صلاحية تنفيذ لـ gradlew
+4. بناء Debug APK (`./gradlew assembleDebug`)
+5. إعادة تسمية APK إلى `tetris-prime-kotlin-1.0.0.apk`
+6. رفع APK كـ artifact
+7. إنشاء أرشيف مصدر عبر `git archive`
+8. رفع المصدر كـ artifact
+
+#### 3. إصلاحات الأخطاء
+- **خطأ 1**: `resource mipmap/ic_launcher not found`
+  - السبب: AndroidManifest.xml ي参照 إلى أيقونة غير موجودة
+  - الحل: حذف `android:icon="@mipmap/ic_launcher"` من الـ manifest
+
+- **خطأ 2**: `Type mismatch: inferred type is CharArray? but Char? was expected`
+  - السبب: نوع grid في Board.kt خاطئ
+  - الحل: تغيير من `Array<CharArray?>` إلى `Array<Char?>`
+
+- **خطأ 3**: `Type mismatch: inferred type is Int but Long was expected`
+  - السبب: `Math.max(50, ...)` تُرجع Int وليس Long
+  - الحل: استخدام `Math.max(50L, ...toLong())`
+
+#### 4. درس مستفاد: GitHub Actions و subdirectories
+- **CI لا يقرأ workflows من مجلدات فرعية**
+- يجب وضع ملفات workflow في `.github/workflows/` في **جذر المستودع** فقط
+- وضع workflow في `kotlin-src/.github/workflows/` لا يعمل
+
+### النتيجة
+- ✅ Build APK: نجح
+- ✅ Artifact APK: 4.77 MB (tetris-prime-kotlin-apk)
+- ✅ Artifact Source: 94 MB (tetris-prime-kotlin-src)
+- 🔗 Build URL: https://github.com/saidjte/tetris-prime-android/actions/runs/39954428780
+
+### ملاحظة
+الـ artifacts متاحة للتحميل من صفحة الـ CI run فقط (تتطلب تسجيل دخول GitHub).
+لإنشاء Release عام بروابط تحميل مباشرة، يجب إنشاؤه يدوياً عبر REST API.
