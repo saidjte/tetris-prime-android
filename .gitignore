@@ -1,0 +1,22 @@
+# Build artifacts
+build/
+decoded/
+*.apk
+!src/base.apk
+*.apks
+*.idsig
+
+# Temporary files
+*.tmp
+*.log
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
